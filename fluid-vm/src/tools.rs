@@ -1,8 +1,12 @@
+use std::fmt::Debug;
+
 pub type Address = usize;
 
 #[derive(Debug, Clone, Copy)]
-pub enum Immediate {
-    None(),
+pub enum Immediate<T>
+where T: Debug
+{
+    NONE(),
     U8(u8),
     U16(u16),
     U32(u32),
@@ -15,6 +19,7 @@ pub enum Immediate {
 
     F32(f32),
     F64(f64),
+    SIZE(T),
 
     BOOL(bool),
     ADDRESS(Address),
