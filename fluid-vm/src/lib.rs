@@ -9,91 +9,19 @@ use allocator::*;
 use heap::*;
 use buffer::*;
 
-macro_rules! as_t {
-    ($a:expr,$typ:ty)=>{
-        $a as $typ
-    }
-}
-
-pub trait Bytes {
-    fn from_bytes(bytes: &[u8]) -> Self;
-    fn to_usize(&self) -> usize;
-    fn to_u64(&self) -> u64;
-}
-
-impl Bytes for u8 {
-    fn from_bytes(bytes: &[u8]) -> Self {
-        bytes[0]
-    }
-
-    fn to_usize(&self) -> usize {
-        *self as usize
-    }
-
-    fn to_u64(&self) -> u64 {
-        *self as u64
-    }
-}
-
-impl Bytes for u16 {
-    fn from_bytes(bytes: &[u8]) -> Self {
-        u16::from_be_bytes(bytes.try_into().unwrap())
-    }
-
-    fn to_usize(&self) -> usize {
-        *self as usize
-    }
-
-    fn to_u64(&self) -> u64 {
-        *self as u64
-    }
-}
-
-impl Bytes for u32 {
-    fn from_bytes(bytes: &[u8]) -> Self {
-        u32::from_be_bytes(bytes.try_into().unwrap())
-    }
-
-    fn to_usize(&self) -> usize {
-        *self as usize
-    }
-
-    fn to_u64(&self) -> u64 {
-        *self as u64
-    }
-}
-
-impl Bytes for u64 {
-    fn from_bytes(bytes: &[u8]) -> Self {
-        u64::from_be_bytes(bytes.try_into().unwrap())
-    }
-
-    fn to_usize(&self) -> usize {
-        *self as usize
-    }
-
-    fn to_u64(&self) -> u64 {
-        *self
-    }
-}
-
-pub struct VM<T>
-where T: Copy, T:Bytes, T: Display, T:Debug {
-    ip: Address,
-    size: PhantomData<T>,
-    input: Buffer<T>,
-    output: Buffer<T>,
+pub struct VM {
+    ip: usize,
+    input: Buffer,
+    output: Buffer,
     heap: Heap,
-    instructions: Vec<fn(&mut VM<T>)>,
+    instructions: Vec<fn(&mut VM)>,
     bytecode: Vec<u8>,
 }
 
-impl<T> VM<T> 
-where T: Copy, T:Bytes, T: Display, T: Debug {
+impl VM {
     pub fn new(bytecode: Vec<u8>) -> Self {
         let mut vm = VM {
             ip: 0,
-            size: PhantomData,
             input: Buffer::new(),
             output: Buffer::new(),
             heap: Heap::new(),
@@ -133,6 +61,10 @@ where T: Copy, T:Bytes, T: Display, T: Debug {
             VM::geti,       // 6
             VM::clear_i,    // 7
             VM::clear_o,    // 8
+            VM::save,       // 9
+            VM::savei,      // 10
+            VM::load,       // 11
+            VM::loadi,      // 12
         ];
     }
 
@@ -182,7 +114,7 @@ where T: Copy, T:Bytes, T: Display, T: Debug {
 
     /// args: type, output_index, type, input_index
     /// 
-    /// sets value of output at index to input at index
+    /// gets value of output at index and sets it to input at index
     fn geti(&mut self) {
         let o_index = self.get_index();
         let i_index = self.get_index();
@@ -200,7 +132,161 @@ where T: Copy, T:Bytes, T: Display, T: Debug {
         self.output.clear();
     }
 
-    fn get_immediate(&mut self) -> Immediate<T> {
+    /// args: type, value
+    /// 
+    /// saves value to heap and pushes its address to input
+    fn save(&mut self) {
+        let ptr = self.get_value_as_ptr();
+        let address = self.heap.add(ptr);
+        self.input.push(Immediate::U64(address as u64));
+    }
+
+    /// args: type_of_value, value, type_of_index, index
+    /// 
+    /// saves value to heap and sets its address to input at index
+    fn savei(&mut self) {
+        let ptr = self.get_value_as_ptr();
+        let address = self.heap.add(ptr);
+        let index = self.get_index();
+        self.input.set(index, Immediate::U64(address as u64));
+    }
+
+    /// args: address (u64), type_of_value
+    /// 
+    /// loads value from address at heap and pushes it to input
+    fn load(&mut self) {
+        let address = self.get_address();
+        let ptr = self.heap.get(address);
+        self.ip += 1;
+        match self.bytecode[self.ip] {
+            0 => { // u8
+                let value = Immediate::U8(ptr.get_data::<u8>());
+                self.input.push(value);
+            }
+
+            1 => { // u16
+                let value = Immediate::U16(ptr.get_data::<u16>());
+                self.input.push(value);
+            }
+
+            2 => { // u32
+                let value = Immediate::U32(ptr.get_data::<u32>());
+                self.input.push(value);
+            }
+
+            3 => { // u64
+                let value = Immediate::U64(ptr.get_data::<u64>());
+                self.input.push(value);
+            }
+
+            4 => { // i8
+                let value = Immediate::I8(ptr.get_data::<i8>());
+                self.input.push(value);
+            }
+
+            5 => { // i16
+                let value = Immediate::I16(ptr.get_data::<i16>());
+                self.input.push(value);
+            }
+
+            6 => { // i32
+                let value = Immediate::I16(ptr.get_data::<i16>());
+                self.input.push(value);
+            }
+
+            7 => { // i64
+                let value = Immediate::I64(ptr.get_data::<i64>());
+                self.input.push(value);
+            }
+
+            8 => { // f32
+                let value = Immediate::F32(ptr.get_data::<f32>());
+                self.input.push(value);
+            }
+
+            9 => { // f64
+                let value = Immediate::F64(ptr.get_data::<f64>());
+                self.input.push(value);
+            }
+
+            10 => { // bool
+                let value = Immediate::BOOL(ptr.get_data::<bool>());
+                self.input.push(value);
+            }
+
+            _ => {}
+        }
+    }
+
+    /// args: address (u64), type_of_index, index, type_of_value,
+    /// 
+    /// loads value from address at heap and sets it to input at index
+    fn loadi(&mut self) {
+        let address = self.get_address();
+        let ptr = self.heap.get(address);
+        let index = self.get_index();
+        self.ip += 1;
+        match self.bytecode[self.ip] {
+            0 => { // u8
+                let value = Immediate::U8(ptr.get_data::<u8>());
+                self.input.set(index, value);
+            }
+
+            1 => { // u16
+                let value = Immediate::U16(ptr.get_data::<u16>());
+                self.input.set(index, value);
+            }
+
+            2 => { // u32
+                let value = Immediate::U32(ptr.get_data::<u32>());
+                self.input.set(index, value);
+            }
+
+            3 => { // u64
+                let value = Immediate::U64(ptr.get_data::<u64>());
+                self.input.set(index, value);
+            }
+
+            4 => { // i8
+                let value = Immediate::I8(ptr.get_data::<i8>());
+                self.input.set(index, value);
+            }
+
+            5 => { // i16
+                let value = Immediate::I16(ptr.get_data::<i16>());
+                self.input.set(index, value);
+            }
+
+            6 => { // i32
+                let value = Immediate::I16(ptr.get_data::<i16>());
+                self.input.set(index, value);
+            }
+
+            7 => { // i64
+                let value = Immediate::I64(ptr.get_data::<i64>());
+                self.input.set(index, value);
+            }
+
+            8 => { // f32
+                let value = Immediate::F32(ptr.get_data::<f32>());
+                self.input.set(index, value);
+            }
+
+            9 => { // f64
+                let value = Immediate::F64(ptr.get_data::<f64>());
+                self.input.set(index, value);
+            }
+
+            10 => { // bool
+                let value = Immediate::BOOL(ptr.get_data::<bool>());
+                self.input.set(index, value);
+            }
+
+            _ => {}
+        }
+    }
+
+    fn get_immediate(&mut self) -> Immediate {
         self.ip += 1;
 
         match self.bytecode[self.ip] {
@@ -278,15 +364,8 @@ where T: Copy, T:Bytes, T: Display, T: Debug {
                 Immediate::BOOL(value)
             }
 
-            11 => { // size
-                self.ip += 1;
-                let size = mem::size_of::<T>();
-                let value = T::from_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
-                Immediate::<T>::SIZE(value)
-            }
-
-            12 => {
-                let mut index = self.input.len();
+            11 => { // maximum index of input
+                let index = self.input.len();
                 if index > 0 {
                     return Immediate::U64(index - 1);
                 }
@@ -294,8 +373,8 @@ where T: Copy, T:Bytes, T: Display, T: Debug {
                 Immediate::U64(index)
             }
 
-            13 => {
-                let mut index = self.output.len();
+            12 => { // maximum index of output
+                let index = self.output.len();
                 if index > 0 {
                     return Immediate::U64(index - 1);
                 }
@@ -385,14 +464,165 @@ where T: Copy, T:Bytes, T: Display, T: Debug {
                 value as usize
             }
 
-            11 => { // size
-                self.ip += 1;
-                let size = mem::size_of::<T>();
-                let value = T::from_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
-                value.to_usize()
+            11 => { // maximum index of input
+                let index = self.input.len();
+                if index > 0 {
+                    return (index - 1) as usize;
+                }
+
+                index as usize
+            }
+
+            12 => { // maximum index of output
+                let index = self.output.len();
+                if index > 0 {
+                    return (index - 1) as usize;
+                }
+
+                index as usize
             }
 
             _ => { 0 as usize}
         }
+    }
+
+    fn get_value_as_ptr(&mut self) -> Ptr {
+        self.ip += 1;
+
+        match self.bytecode[self.ip] {
+            0 => { // u8
+                self.ip += 1;
+                let value = self.bytecode[self.ip];
+                let ptr = Ptr::allocate(mem::size_of::<u8>());
+                ptr.set_data(value);
+                ptr
+            }
+
+            1 => { // u16
+                self.ip += 1;
+                let size = mem::size_of::<u16>();
+                let value = u16::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                let ptr = Ptr::allocate(size);
+                ptr.set_data(value);
+                self.ip += size - 1;
+                ptr
+            }
+
+            2 => { // u32
+                self.ip += 1;
+                let size = mem::size_of::<u32>();
+                let value = u32::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                let ptr = Ptr::allocate(size);
+                ptr.set_data(value);
+                self.ip += size - 1;
+                ptr
+            }
+
+            3 => { // u64
+                self.ip += 1;
+                let size = mem::size_of::<u64>();
+                let value = u64::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                let ptr = Ptr::allocate(size);
+                ptr.set_data(value);
+                self.ip += size - 1;
+                ptr
+            }
+
+            4 => { // i8
+                self.ip += 1;
+                let value = self.bytecode[self.ip] as i8;
+                let ptr = Ptr::allocate(mem::size_of::<i8>());
+                ptr.set_data(value);
+                ptr
+            }
+
+            5 => { // i16
+                self.ip += 1;
+                let size = mem::size_of::<i16>();
+                let value = i16::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                let ptr = Ptr::allocate(size);
+                ptr.set_data(value);
+                self.ip += size - 1;
+                ptr
+            }
+
+            6 => { // i32
+                self.ip += 1;
+                let size = mem::size_of::<i32>();
+                let value = i32::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                let ptr = Ptr::allocate(size);
+                ptr.set_data(value);
+                self.ip += size - 1;
+                ptr
+            }
+
+            7 => { // i64
+                self.ip += 1;
+                let size = mem::size_of::<i64>();
+                let value = i64::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                let ptr = Ptr::allocate(size);
+                ptr.set_data(value);
+                self.ip += size - 1;
+                ptr
+            }
+
+            8 => { // f32
+                self.ip += 1;
+                let size = mem::size_of::<f32>();
+                let value = f32::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                let ptr = Ptr::allocate(size);
+                ptr.set_data(value);
+                self.ip += size - 1;
+                ptr
+            }
+
+            9 => { // f64
+                self.ip += 1;
+                let size = mem::size_of::<f64>();
+                let value = f64::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                let ptr = Ptr::allocate(size);
+                ptr.set_data(value);
+                self.ip += size - 1;
+                ptr
+            }
+
+            10 => { // bool
+                self.ip += 1;
+                let value = self.bytecode[self.ip] != 0;
+                let ptr = Ptr::allocate(mem::size_of::<bool>());
+                ptr.set_data(value);
+                ptr
+            }
+
+            11 => { // maximum index of input
+                let mut index = self.input.len();
+                if index > 0 {
+                    index -= 1;
+                }
+                let ptr = Ptr::allocate(mem::size_of::<u64>());
+                ptr.set_data(index);
+                ptr
+            }
+
+            12 => { // maximum index of output
+                let mut index = self.output.len();
+                if index > 0 {
+                    index -= 1;
+                }
+                let ptr = Ptr::allocate(mem::size_of::<u64>());
+                ptr.set_data(index);
+                ptr
+            }
+
+            _ => { Ptr::allocate(0) }
+        }
+    }
+
+    fn get_address(&mut self) -> Address {
+        self.ip += 1;
+        let size = mem::size_of::<u64>();
+        let value = u64::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+        self.ip += size - 1;
+        value as usize
     }
 }

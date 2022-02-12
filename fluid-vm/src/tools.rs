@@ -3,8 +3,7 @@ use std::fmt::Debug;
 pub type Address = usize;
 
 #[derive(Debug, Clone, Copy)]
-pub enum Immediate<T>
-where T: Debug
+pub enum Immediate
 {
     NONE(),
     U8(u8),
@@ -19,7 +18,6 @@ where T: Debug
 
     F32(f32),
     F64(f64),
-    SIZE(T),
 
     BOOL(bool),
     ADDRESS(Address),

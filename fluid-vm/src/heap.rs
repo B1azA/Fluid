@@ -27,6 +27,11 @@ impl Heap {
         }
     }
 
+    /// returns pointer to value at address
+    pub fn get(&self, index: Address) -> Ptr {
+        self.data[index]
+    }
+
     /// removes pointer from heap but won't deallocate it
     pub fn remove(&mut self, index: Address) -> Ptr {
         self.empty.push(index);

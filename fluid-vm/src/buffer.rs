@@ -2,37 +2,34 @@ use std::fmt::Debug;
 
 use crate::tools::*;
 
-pub struct Buffer<T> 
-where T: Debug
+pub struct Buffer
 {
-    data: Vec<Immediate<T>>,
+    data: Vec<Immediate>,
 }
 
-impl<T> Buffer<T> 
-where T: Clone, T: Copy, T: Debug
-{
+impl Buffer {
     pub fn new() -> Self {
         Self {
             data: Vec::new(),
         }
     }
 
-    pub fn push(&mut self, value: Immediate<T>) {
+    pub fn push(&mut self, value: Immediate) {
         self.data.push(value);
     }
 
-    pub fn pop(&mut self) -> Immediate<T> {
+    pub fn pop(&mut self) -> Immediate {
         self.data.pop().unwrap()
     }
 
-    pub fn get(&self, index: usize) -> Immediate<T> {
+    pub fn get(&self, index: usize) -> Immediate {
         if self.data.len() > index {
             return self.data[index];
         }
         Immediate::NONE()
     }
 
-    pub fn set(&mut self, index: usize, value: Immediate<T>) {
+    pub fn set(&mut self, index: usize, value: Immediate) {
         if self.data.len() > index {
             self.data[index] = value;
         } else {
