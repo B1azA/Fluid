@@ -127,10 +127,12 @@ where T: Copy, T:Bytes, T: Display, T: Debug {
             VM::nop,        // 0
             VM::push,       // 1
             VM::pop,        // 2
-            VM::set,        // 3
-            VM::get,        // 4
-            VM::clear_i,    // 5
-            VM::clear_o,    // 6
+            VM::popi,       // 3
+            VM::set,        // 4
+            VM::get,        // 5
+            VM::geti,       // 6
+            VM::clear_i,    // 7
+            VM::clear_o,    // 8
         ];
     }
 
@@ -152,6 +154,15 @@ where T: Copy, T:Bytes, T: Display, T: Debug {
         self.input.push(value);
     }
 
+    /// args: type, index
+    /// 
+    /// pops value from output and sets it to input at index 
+    fn popi(&mut self) {
+        let value = self.output.pop();
+        let index = self.get_index();
+        self.input.set(index, value);
+    }
+
     /// args: type, value, type, index
     /// 
     /// sets value of input at index
@@ -163,10 +174,20 @@ where T: Copy, T:Bytes, T: Display, T: Debug {
 
     /// args: type, index
     /// 
-    /// pushes value of output at index to input
+    /// pushes value of output to index
     fn get(&mut self) {
         let index = self.get_index();
         self.input.push(self.output.get(index))
+    }
+
+    /// args: type, output_index, type, input_index
+    /// 
+    /// sets value of output at index to input at index
+    fn geti(&mut self) {
+        let o_index = self.get_index();
+        let i_index = self.get_index();
+        let value = self.output.get(o_index);
+        self.input.set(i_index, value);
     }
 
     /// clears input
