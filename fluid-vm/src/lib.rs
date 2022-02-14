@@ -300,6 +300,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<u16>();
                 let value = u16::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 Immediate::U16(value)
             }
 
@@ -307,6 +308,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<u32>();
                 let value = u32::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 Immediate::U32(value)
             }
 
@@ -314,6 +316,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<u64>();
                 let value = u64::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 Immediate::U64(value)
             }
 
@@ -327,6 +330,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<i16>();
                 let value = i16::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 Immediate::I16(value)
             }
 
@@ -334,6 +338,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<i32>();
                 let value = i32::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 Immediate::I32(value)
             }
 
@@ -341,6 +346,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<i64>();
                 let value = i64::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 Immediate::I64(value)
             }
 
@@ -348,6 +354,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<f32>();
                 let value = f32::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 Immediate::F32(value)
             }
 
@@ -355,6 +362,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<f64>();
                 let value = f64::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 Immediate::F64(value)
             }
 
@@ -400,6 +408,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<u16>();
                 let value = u16::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 value as usize
             }
 
@@ -407,6 +416,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<u32>();
                 let value = u32::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 value as usize
             }
 
@@ -414,6 +424,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<u64>();
                 let value = u64::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 value as usize
             }
 
@@ -427,6 +438,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<i16>();
                 let value = i16::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 value as usize
             }
 
@@ -434,6 +446,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<i32>();
                 let value = i32::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 value as usize
             }
 
@@ -441,6 +454,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<i64>();
                 let value = i64::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 value as usize
             }
 
@@ -448,6 +462,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<f32>();
                 let value = f32::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 value as usize
             }
 
@@ -455,6 +470,7 @@ impl VM {
                 self.ip += 1;
                 let size = mem::size_of::<f64>();
                 let value = f64::from_be_bytes(self.bytecode[self.ip..self.ip + size].try_into().unwrap());
+                self.ip += size - 1;
                 value as usize
             }
 
